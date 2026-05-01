@@ -23,7 +23,7 @@ import { nocItemSheetArmure } from "./sheets/items/item-sheet-armure.mjs";
 import { preloadHandlebarsTemplates } from "./helpers/templates.mjs";
 import { NOC } from "./helpers/config.mjs";
 import CompteurFiel from "./compteursFiel/compteurFiel.mjs";
-import { registerNocSettings } from "./registerSettings.mjs";
+import { registerNocSettings, applyFielCounterDisplay } from "./registerSettings.mjs";    // add fiel counter settings
 import { SocketManager } from "./socketManager.mjs";
 import { objetDieu } from "./objectDieu.mjs";
 import { registerHelpers } from './helpers/handlebarHelpers.js';
@@ -186,7 +186,12 @@ Hooks.on("renderGamePause", (app, html, data, options) => {
 });
 
 
-
+/* -------------------------------------------- */
+/*  Apply Fiel counter settings on each render  */
+/* -------------------------------------------- */
+Hooks.on("renderCompteurFiel", () => {
+  applyFielCounterDisplay();
+});
 
 /* -------------------------------------------- */
 /*  Ready Hook                                  */

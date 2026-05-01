@@ -115,7 +115,6 @@ export class nocActorSheetPersonnage extends foundry.appv1.sheets.ActorSheet {
     let dropItem = await Item.implementation.fromDropData(data);
     if (dropItem.type == "thème") { return ui.notifications.warn("Les items THEMES doivent être glisser sur les fiches d'items ARCHETYPES") }
     if (dropItem.type == "archetype") { this._onDropArchetype(ev, dropItem) }
-
     super._onDropItem(ev, data);
 
   }
@@ -124,18 +123,29 @@ export class nocActorSheetPersonnage extends foundry.appv1.sheets.ActorSheet {
     if (linkedThemes) {
       let theme = linkedThemes.find(th => th.choosed)
       if (theme) {
+        // Bug fix : create a name attribute for "effect" objects to apply the changes linked to the theme correctly
         let choosedThemeId = theme.id;
+        let choosedTheme = theme;        
+        
+        const itemData = foundry.utils.deepClone(choosedTheme.itemData);
+        if (Array.isArray(itemData.effects)) {
+          for (const effect of itemData.effects) {
+            if (!effect.name) {
+              effect.name = effect.label || "Effet sans nom";
+            }
+          }
+        }
+
         let themeItem = await Item.get(choosedThemeId);
         if (themeItem) {
           await this.actor.createEmbeddedDocuments("Item", [themeItem])
         } else {
-          await this.actor.createEmbeddedDocuments("Item", [theme.itemData])
+          await this.actor.createEmbeddedDocuments("Item", [itemData])
         }
       } else {
         ui.notifications.warn("Thème non trouvé")
       }
     }
-
   }
   async _onDropQuantar(ev, data) {
     let item = await this.actor.getEmbeddedDocument('Item', ev.currentTarget.dataset.itemId);
@@ -198,6 +208,107 @@ export class nocActorSheetPersonnage extends foundry.appv1.sheets.ActorSheet {
 
     super._onDragStart(ev)
 
+  }
+
+  // New feature for character sheet : add an archetype and theme from the character sheet
+  async _onAddArchetype(ev) {
+    // get archetypes from compendium
+    const pack = game.packs.get("noc.archetypes");
+    const archetypes = await pack.getDocuments();
+    archetypes.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    
+    // build the HTML of the archetype list
+    const listHTML = archetypes.map(a => `
+      <div class="archetype-choice flexrow" 
+          data-archetype-id="${a.uuid}" 
+          style="cursor:pointer; padding: 4px; border-bottom: 1px solid #ccc;">
+        <div>${a.name}</div>
+      </div>
+    `).join("");
+    
+    // Display the dialog
+    new Dialog({
+      title: "Choisir un archétype",
+      content: `
+        <div style="max-height: 400px; overflow-y: auto; padding: 4px;">
+          ${listHTML}
+        </div>
+      `,
+      buttons: {
+        cancel: {
+          label: "Annuler",
+          icon: '<i class="fas fa-times"></i>'
+        }
+      },
+      render: (html) => {
+        html.find(".archetype-choice").click(async (ev) => {
+          const archetypeUuid = ev.currentTarget.dataset.archetypeId;
+          const archetype = await fromUuid(archetypeUuid);
+          
+          // close the first dialog
+          ev.currentTarget.closest(".dialog").querySelector(".close").click();
+          
+          // get the linked themes
+          const linkedThemes = await archetype.getFlag("noc", "linkedThemes");
+          
+          if (!linkedThemes || linkedThemes.length === 0) {
+            // if no themes, we create the archetype without theme
+            await this.actor.createEmbeddedDocuments("Item", [archetype.toObject()]);
+            return;
+          }
+          
+          // build the theme list
+          const themesHTML = linkedThemes.map(th => `
+            <div class="theme-choice flexrow"
+                data-theme-index="${th.id}"
+                style="cursor:pointer; padding: 4px; border-bottom: 1px solid #ccc;">
+              <div>${th.name}</div>
+            </div>
+          `).join("");
+          
+          // display the second dialog
+          new Dialog({
+            title: `Choisir un thème pour ${archetype.name}`,
+            content: `
+              <div style="max-height: 400px; overflow-y: auto; padding: 4px;">
+                ${themesHTML}
+              </div>
+            `,
+            buttons: {
+              cancel: {
+                label: "Annuler",
+                icon: '<i class="fas fa-times"></i>'
+              }
+            },
+            render: (html) => {
+              html.find(".theme-choice").click(async (ev) => {
+                const themeId = ev.currentTarget.dataset.themeIndex;
+                const theme = linkedThemes.find(th => th.id === themeId);
+                
+                // close the dialog
+                ev.currentTarget.closest(".dialog").querySelector(".close").click();
+                
+                // bug fix : create a name for the effect object of theme to apply the changes correctly
+                const themeData = foundry.utils.deepClone(theme.itemData);
+                if (Array.isArray(themeData.effects)) {
+                  for (const effect of themeData.effects) {
+                    if (!effect.name) effect.name = effect.label || "Effet sans nom";
+                  }
+                }
+                
+                // create archetype and theme
+                await this.actor.createEmbeddedDocuments("Item", [
+                  archetype.toObject(),
+                  themeData
+                ]);
+                
+                ui.notifications.info(`${archetype.name} (${theme.name}) ajouté au personnage.`);
+              });
+            }
+          }).render(true);
+        });
+      }
+    }).render(true);
   }
 
 
@@ -308,6 +419,9 @@ export class nocActorSheetPersonnage extends foundry.appv1.sheets.ActorSheet {
     html.find(".domaine-control a").click(this.updateDomaine.bind(this));
     html.find(".delete-trait").click(this.deleteTrait.bind(this));
 
+    //bind the add archetype button
+    html.find(".addArchetype").click(this._onAddArchetype.bind(this));
+
   }
   async deleteTrait(ev) {
     let traitLabel = ev.currentTarget.dataset.traitLabel;
@@ -325,8 +439,8 @@ export class nocActorSheetPersonnage extends foundry.appv1.sheets.ActorSheet {
     };
     update.system.talents[dom] = {};
     update.system.talents[dom][tal] = {};
-
-    let value = this.actor.system.talents[dom][tal].niveau;
+    // Bug fix : + and - buttons fix for talent modification in the character sheet
+    let value = this.actor._source.system.talents[dom][tal].niveau;
 
 
 

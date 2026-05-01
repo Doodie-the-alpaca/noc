@@ -136,7 +136,6 @@ export class nocItemSheetArchetype extends foundry.appv1.sheets.ItemSheet {
         th.choosed = false
       }
     }
-
     let targetTheme = themes.find(th => th.id == targetThemeId);
     targetTheme.choosed = ev.currentTarget.checked
     await this.item.setFlag("noc", "linkedThemes", themes);
@@ -146,7 +145,18 @@ export class nocItemSheetArchetype extends foundry.appv1.sheets.ItemSheet {
     let themes = await this.item.getFlag("noc", "linkedThemes");
     let targetThemeId = ev.target.dataset.themeId;
     let targetTheme = themes.find(th => th.id == targetThemeId);
-    let theme = await Item.create(targetTheme.itemData, { temporary: true });
+    
+    // Bug fix : create a name attribute for "effect" objects to apply the changes linked to the theme correctly
+    const itemData = foundry.utils.deepClone(targetTheme.itemData);
+    if (Array.isArray(itemData.effects)) {
+      for (const effect of itemData.effects) {
+        if (!effect.name) {
+          effect.name = effect.label || "Effet sans nom";
+        }
+      }
+    }
+    
+    let theme = await Item.create(itemData, { temporary: true });
     theme.system.origin = "embeddedItem";
     let themeForm = await new nocItemSheetTheme(theme).render(true);
     return themeForm;

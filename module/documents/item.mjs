@@ -5,25 +5,25 @@
 export class nocItem extends Item {
   constructor(...args) {
     let data = args[0];
-    switch (data.type) {
-      case "arme":
-        data.img = 'systems/noc/asset/default_icons/arme.webp';
-        break;
-      case "document administratif":
-        data.img = 'systems/noc/asset/default_icons/document_administratif.webp';
-        break;
-      case "outil":
-        data.img = 'systems/noc/asset/default_icons/outil.webp';
-        break;
-      case "armure":
-        data.img = 'systems/noc/asset/default_icons/armure.webp';
-        break;
-      default:
-        data.img = 'systems/noc/asset/default_icons/question_mark.webp';
-        break;
-
-
-
+    // bug fix : check if an image is set before setting the default image. Manually set images were replaced by default image at each item reloading.
+    if (!data.img || data.img === Item.DEFAULT_ICON) {
+      switch (data.type) {
+        case "arme":
+          data.img = 'systems/noc/asset/default_icons/arme.webp';
+          break;
+        case "document administratif":
+          data.img = 'systems/noc/asset/default_icons/document_administratif.webp';
+          break;
+        case "outil":
+          data.img = 'systems/noc/asset/default_icons/outil.webp';
+          break;
+        case "armure":
+          data.img = 'systems/noc/asset/default_icons/armure.webp';
+          break;
+        default:
+          data.img = 'systems/noc/asset/default_icons/question_mark.webp';
+          break;
+      }
     }
     super(...args);
   }

@@ -94,7 +94,8 @@ export class Quality {
                 "value": this.isDefault ? '-1' : '1',
                 "mode": 2
             }],
-            disabled: false
+            disabled: false,
+            name: this.label    // Bug fix : create a name attribute for "effect" objects to apply the changes correctly
         };
     }
     async applyEffect() {
