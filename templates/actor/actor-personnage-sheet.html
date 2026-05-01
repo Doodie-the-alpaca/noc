@@ -202,23 +202,18 @@
 						>
 					</div>
 					<div class="form-group">
-						<div>archetype :</div>
-
+						<div>archetype :
+							{{#unless actor.itemTypes.archetype.length}}
+								<a class="fas fa-add addArchetype" data-tooltip="choisir un archétype"></a>
+							{{/unless}}
+						</div>
 						<div class="archetype-resume flexrow">
-							{{#each actor.itemTypes.archetype as
-                            |archetype|}}
+							{{#each actor.itemTypes.archetype as |archetype|}}
 								<div class="item-name">{{archetype.name}}</div>
 								<div class="item-control">
-									<a
-										class="fas fa-trash item-delete"
-										data-item-id="{{archetype.id}}"
-									></a>
-									<a
-										class="fas fa-edit item-open"
-										data-item-id="{{archetype.id}}"
-									></a>
+									<a class="fas fa-trash item-delete" data-item-id="{{archetype.id}}"></a>
+									<a class="fas fa-edit item-open" data-item-id="{{archetype.id}}"></a>
 								</div>
-
 							{{/each}}
 						</div>
 					</div>
